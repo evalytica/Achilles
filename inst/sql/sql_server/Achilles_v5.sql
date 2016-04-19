@@ -2615,12 +2615,7 @@ from
 group by YEAR(condition_start_date)*100 + month(condition_start_date)
 ;
 --}
-
-<<<<<<< HEAD
-=======
-truncate Table #rawData_406;
-drop table #rawData_406;
->>>>>>> fa5838c04df85a1445c778e29b2e776e00805a1e
+ 
 drop table #condition_concept_ids;
 --}
 
