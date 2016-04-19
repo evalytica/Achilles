@@ -1184,6 +1184,9 @@ insert into @results_database_schema.ACHILLES_analysis (analysis_id, analysis_na
 insert into @results_database_schema.ACHILLES_analysis (analysis_id, analysis_name, stratum_1_name)
 	values (1820, 'Number of measurement records  by measurement start month', 'calendar month');
 
+insert into @results_database_schema.ACHILLES_analysis (analysis_id, analysis_name)
+	values (1821, 'Number of measurement records with no numeric value');
+
 --} : {else if not createTable
 delete from @results_database_schema.ACHILLES_results where analysis_id IN (@list_of_analysis_ids);
 delete from @results_database_schema.ACHILLES_results_dist where analysis_id IN (@list_of_analysis_ids);
@@ -2290,45 +2293,58 @@ where p1.care_site_id is not null
 ACHILLES Analyses on CONDITION_OCCURRENCE table
 
 *********************************************/
+--{ 400 in (@list_of_analysis_ids) | 401 in (@list_of_analysis_ids) | 402 in (@list_of_analysis_ids)  | 403 in (@list_of_analysis_ids)  | 404 in (@list_of_analysis_ids)  | 405 in (@list_of_analysis_ids)  | 406 in (@list_of_analysis_ids)  | 409 in (@list_of_analysis_ids) | 410 in (@list_of_analysis_ids) | 411 in (@list_of_analysis_ids) | 412 in (@list_of_analysis_ids) | 413 in (@list_of_analysis_ids) | 420 in (@list_of_analysis_ids) }?{
 
+create Table #condition_concept_ids (concept_id int, record_count bigint);
+insert into #condition_concept_ids (concept_id, record_count)
+select condition_concept_id, count_big(*) as record_count
+from @cdm_database_schema.condition_occurrence co1
+group by condition_concept_id;
 
 --{400 IN (@list_of_analysis_ids)}?{
--- 400	Number of persons with at least one condition occurrence, by condition_concept_id
+--400	Number of persons with at least one condition occurrence, by condition_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, count_value)
-select 400 as analysis_id, 
-	co1.condition_CONCEPT_ID as stratum_1,
+select 400 as analysis_id,
+	anc.ancestor_concept_id as stratum_1,
 	COUNT_BIG(distinct co1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.condition_occurrence co1
-group by co1.condition_CONCEPT_ID
+inner join
+  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)    
+group by anc.ancestor_concept_id
 ;
 --}
-
 
 --{401 IN (@list_of_analysis_ids)}?{
 -- 401	Number of condition occurrence records, by condition_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, count_value)
-select 401 as analysis_id, 
-	co1.condition_CONCEPT_ID as stratum_1,
+select 401 as analysis_id,
+	anc.ancestor_concept_id as stratum_1,
 	COUNT_BIG(co1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.condition_occurrence co1
-group by co1.condition_CONCEPT_ID
+inner join
+  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)  
+group by anc.ancestor_concept_id
 ;
 --}
-
 
 
 --{402 IN (@list_of_analysis_ids)}?{
 -- 402	Number of persons by condition occurrence start month, by condition_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, count_value)
-select 402 as analysis_id,   
-	co1.condition_concept_id as stratum_1,
-	YEAR(condition_start_date)*100 + month(condition_start_date) as stratum_2, 
+select 402 as analysis_id,
+	anc.ancestor_concept_id as stratum_1,
+	YEAR(condition_start_date)*100 + month(condition_start_date) as stratum_2,
 	COUNT_BIG(distinct PERSON_ID) as count_value
 from
-@cdm_database_schema.condition_occurrence co1
-group by co1.condition_concept_id, 
+	@cdm_database_schema.condition_occurrence co1
+inner join
+  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)    
+group by anc.ancestor_concept_id,
 	YEAR(condition_start_date)*100 + month(condition_start_date)
 ;
 --}
@@ -2339,8 +2355,11 @@ group by co1.condition_concept_id,
 -- 403	Number of distinct condition occurrence concepts per person
 with rawData(person_id, count_value) as
 (
-  select person_id, COUNT_BIG(distinct condition_concept_id) as num_conditions
-  from @cdm_database_schema.condition_occurrence
+  select person_id, COUNT_BIG(distinct anc.ancestor_concept_id) as num_conditions
+  from @cdm_database_schema.condition_occurrence co1
+	inner join
+  	@vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+  where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)    	
 	group by person_id
 ),
 overallStats (avg_value, stdev_value, min_value, max_value, total) as
@@ -2354,8 +2373,8 @@ overallStats (avg_value, stdev_value, min_value, max_value, total) as
 ),
 stats (count_value, total, rn) as
 (
-  select count_value, 
-  	count_big(*) as total, 
+  select count_value,
+  	count_big(*) as total,
 		row_number() over (order by count_value) as rn
   FROM rawData
   group by count_value
@@ -2399,17 +2418,20 @@ drop table #tempResults;
 --{404 IN (@list_of_analysis_ids)}?{
 -- 404	Number of persons with at least one condition occurrence, by condition_concept_id by calendar year by gender by age decile
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, stratum_3, stratum_4, count_value)
-select 404 as analysis_id,   
-	co1.condition_concept_id as stratum_1,
+select 404 as analysis_id,
+	anc.ancestor_concept_id as stratum_1,
 	YEAR(condition_start_date) as stratum_2,
 	p1.gender_concept_id as stratum_3,
-	floor((year(condition_start_date) - p1.year_of_birth)/10) as stratum_4, 
+	floor((year(condition_start_date) - p1.year_of_birth)/10) as stratum_4,
 	COUNT_BIG(distinct p1.PERSON_ID) as count_value
 from @cdm_database_schema.PERSON p1
 inner join
 @cdm_database_schema.condition_occurrence co1
 on p1.person_id = co1.person_id
-group by co1.condition_concept_id, 
+inner join
+  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)    
+group by anc.ancestor_concept_id,
 	YEAR(condition_start_date),
 	p1.gender_concept_id,
 	floor((year(condition_start_date) - p1.year_of_birth)/10)
@@ -2419,13 +2441,16 @@ group by co1.condition_concept_id,
 --{405 IN (@list_of_analysis_ids)}?{
 -- 405	Number of condition occurrence records, by condition_concept_id by condition_type_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, count_value)
-select 405 as analysis_id, 
-	co1.condition_CONCEPT_ID as stratum_1,
+select 405 as analysis_id,
+	anc.ancestor_concept_id as stratum_1,
 	co1.condition_type_concept_id as stratum_2,
 	COUNT_BIG(co1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.condition_occurrence co1
-group by co1.condition_CONCEPT_ID,	
+inner join
+  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)    
+group by anc.ancestor_concept_id,
 	co1.condition_type_concept_id
 ;
 --}
@@ -2434,16 +2459,19 @@ group by co1.condition_CONCEPT_ID,
 
 --{406 IN (@list_of_analysis_ids)}?{
 -- 406	Distribution of age by condition_concept_id
-select co1.condition_concept_id as subject_id,
+select ancestor_concept_id as subject_id,
   p1.gender_concept_id,
 	(co1.condition_start_year - p1.year_of_birth) as count_value
 INTO #rawData_406
 from @cdm_database_schema.PERSON p1
-inner join 
+inner join
 (
-	select person_id, condition_concept_id, min(year(condition_start_date)) as condition_start_year
-	from @cdm_database_schema.condition_occurrence
-	group by person_id, condition_concept_id
+	select person_id, anc.ancestor_concept_id, min(year(condition_start_date)) as condition_start_year
+	from @cdm_database_schema.condition_occurrence co2
+	inner join
+    @vocab_database_schema.concept_ancestor anc   on co2.condition_concept_id = anc.descendant_concept_id
+  where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)      
+	group by person_id, anc.ancestor_concept_id
 ) co1 on p1.person_id = co1.person_id
 ;
 
@@ -2487,7 +2515,7 @@ select 406 as analysis_id,
 	MIN(case when p.accumulated >= .90 * o.total then count_value else o.max_value end) as p90_value
 INTO #tempResults
 from priorStats p
-join overallStats o on p.stratum1_id = o.stratum1_id and p.stratum2_id = o.stratum2_id 
+join overallStats o on p.stratum1_id = o.stratum1_id and p.stratum2_id = o.stratum2_id
 GROUP BY o.stratum1_id, o.stratum2_id, o.total, o.min_value, o.max_value, o.avg_value, o.stdev_value
 ;
 
@@ -2503,6 +2531,7 @@ truncate Table #rawData_406;
 drop table #rawData_406;
 
 --}
+
 
 
 --{409 IN (@list_of_analysis_ids)}?{
@@ -2587,7 +2616,10 @@ group by YEAR(condition_start_date)*100 + month(condition_start_date)
 ;
 --}
 
-
+truncate Table #rawData_406;
+drop table #rawData_406;
+drop table #condition_concept_ids;
+--}
 
 /********************************************
 
@@ -2733,8 +2765,8 @@ from #tempResults
 ;
 
 truncate table #tempResults;
-
 drop table #tempResults;
+
 --}
 
 
@@ -3076,17 +3108,27 @@ ACHILLES Analyses on PROCEDURE_OCCURRENCE table
 
 *********************************************/
 
+--{ 600 in (@list_of_analysis_ids) | 601 in (@list_of_analysis_ids) | 602 in (@list_of_analysis_ids)  | 603 in (@list_of_analysis_ids)  | 604 in (@list_of_analysis_ids)  | 605 in (@list_of_analysis_ids)  | 606 in (@list_of_analysis_ids)  | 609 in (@list_of_analysis_ids) | 610 in (@list_of_analysis_ids) | 611 in (@list_of_analysis_ids) | 612 in (@list_of_analysis_ids) | 613 in (@list_of_analysis_ids) | 620 in (@list_of_analysis_ids) }?{
+
+create Table #procedure_concept_ids (concept_id int, record_count bigint);
+insert into #procedure_concept_ids (concept_id, record_count)
+select procedure_concept_id, count_big(*) as record_count
+from @cdm_database_schema.procedure_occurrence co1
+group by procedure_concept_id;
 
 
 --{600 IN (@list_of_analysis_ids)}?{
 -- 600	Number of persons with at least one procedure occurrence, by procedure_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, count_value)
 select 600 as analysis_id, 
-	po1.procedure_CONCEPT_ID as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	COUNT_BIG(distinct po1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.procedure_occurrence po1
-group by po1.procedure_CONCEPT_ID
+inner join
+  @vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)      
+group by anc.ancestor_concept_id	
 ;
 --}
 
@@ -3095,11 +3137,14 @@ group by po1.procedure_CONCEPT_ID
 -- 601	Number of procedure occurrence records, by procedure_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, count_value)
 select 601 as analysis_id, 
-	po1.procedure_CONCEPT_ID as stratum_1,
+  anc.ancestor_concept_id as stratum_1,	
 	COUNT_BIG(po1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.procedure_occurrence po1
-group by po1.procedure_CONCEPT_ID
+inner join
+  @vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)        
+group by anc.ancestor_concept_id	
 ;
 --}
 
@@ -3109,12 +3154,15 @@ group by po1.procedure_CONCEPT_ID
 -- 602	Number of persons by procedure occurrence start month, by procedure_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, count_value)
 select 602 as analysis_id,   
-	po1.procedure_concept_id as stratum_1,
+  anc.ancestor_concept_id as stratum_1,	
 	YEAR(procedure_date)*100 + month(procedure_date) as stratum_2, 
 	COUNT_BIG(distinct PERSON_ID) as count_value
 from
-@cdm_database_schema.procedure_occurrence po1
-group by po1.procedure_concept_id, 
+  @cdm_database_schema.procedure_occurrence po1
+inner join
+  @vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)        
+group by anc.ancestor_concept_id,
 	YEAR(procedure_date)*100 + month(procedure_date)
 ;
 --}
@@ -3125,8 +3173,11 @@ group by po1.procedure_concept_id,
 -- 603	Number of distinct procedure occurrence concepts per person
 with rawData(count_value) as
 (
-  select COUNT_BIG(distinct po.procedure_concept_id) as num_procedures
+  select COUNT_BIG(distinct anc.ancestor_concept_id) as num_procedures
 	from @cdm_database_schema.procedure_occurrence po
+	inner join
+  	@vocab_database_schema.concept_ancestor anc   on po.procedure_concept_id = anc.descendant_concept_id
+  where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)        	
 	group by po.person_id
 ),
 overallStats (avg_value, stdev_value, min_value, max_value, total) as
@@ -3187,16 +3238,19 @@ drop table #tempResults;
 -- 604	Number of persons with at least one procedure occurrence, by procedure_concept_id by calendar year by gender by age decile
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, stratum_3, stratum_4, count_value)
 select 604 as analysis_id,   
-	po1.procedure_concept_id as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	YEAR(procedure_date) as stratum_2,
 	p1.gender_concept_id as stratum_3,
 	floor((year(procedure_date) - p1.year_of_birth)/10) as stratum_4, 
 	COUNT_BIG(distinct p1.PERSON_ID) as count_value
 from @cdm_database_schema.PERSON p1
 inner join
-@cdm_database_schema.procedure_occurrence po1
+  @cdm_database_schema.procedure_occurrence po1
+inner join
+  	@vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
 on p1.person_id = po1.person_id
-group by po1.procedure_concept_id, 
+where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)      
+group by anc.ancestor_concept_id, 
 	YEAR(procedure_date),
 	p1.gender_concept_id,
 	floor((year(procedure_date) - p1.year_of_birth)/10)
@@ -3207,12 +3261,15 @@ group by po1.procedure_concept_id,
 -- 605	Number of procedure occurrence records, by procedure_concept_id by procedure_type_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, count_value)
 select 605 as analysis_id, 
-	po1.procedure_CONCEPT_ID as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	po1.procedure_type_concept_id as stratum_2,
 	COUNT_BIG(po1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.procedure_occurrence po1
-group by po1.procedure_CONCEPT_ID,	
+inner join
+  	@vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)        	
+group by anc.ancestor_concept_id,	
 	po1.procedure_type_concept_id
 ;
 --}
@@ -3221,16 +3278,19 @@ group by po1.procedure_CONCEPT_ID,
 
 --{606 IN (@list_of_analysis_ids)}?{
 -- 606	Distribution of age by procedure_concept_id
-select po1.procedure_concept_id as subject_id,
+select ancestor_concept_id as subject_id,
   p1.gender_concept_id,
 	po1.procedure_start_year - p1.year_of_birth as count_value
 INTO #rawData_606
 from @cdm_database_schema.PERSON p1
 inner join
 (
-	select person_id, procedure_concept_id, min(year(procedure_date)) as procedure_start_year
-	from @cdm_database_schema.procedure_occurrence
-	group by person_id, procedure_concept_id
+	select person_id, anc.ancestor_concept_id, min(year(procedure_date)) as procedure_start_year
+	from @cdm_database_schema.procedure_occurrence po2
+  inner join
+  	@vocab_database_schema.concept_ancestor anc   on po2.procedure_concept_id = anc.descendant_concept_id	
+  where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)        	
+	group by person_id, anc.ancestor_concept_id
 ) po1 on p1.person_id = po1.person_id
 ;
 
@@ -3289,6 +3349,9 @@ truncate table #rawData_606;
 drop table #rawData_606;
 
 --}
+
+
+
 
 --{609 IN (@list_of_analysis_ids)}?{
 -- 609	Number of procedure occurrence records with invalid person_id
@@ -3362,6 +3425,9 @@ group by YEAR(procedure_date)*100 + month(procedure_date)
 ;
 --}
 
+drop table #procedure_concept_ids;
+--}
+
 
 /********************************************
 
@@ -3369,6 +3435,13 @@ ACHILLES Analyses on DRUG_EXPOSURE table
 
 *********************************************/
 
+--{ 700 in (@list_of_analysis_ids) | 701 in (@list_of_analysis_ids) | 702 in (@list_of_analysis_ids)  | 703 in (@list_of_analysis_ids)  | 704 in (@list_of_analysis_ids)  | 705 in (@list_of_analysis_ids)  | 706 in (@list_of_analysis_ids)  | 709 in (@list_of_analysis_ids) | 710 in (@list_of_analysis_ids) | 711 in (@list_of_analysis_ids) | 712 in (@list_of_analysis_ids) | 713 in (@list_of_analysis_ids) | 715 in (@list_of_analysis_ids) | 716 in (@list_of_analysis_ids) | 717 in (@list_of_analysis_ids) | 720 in (@list_of_analysis_ids) }?{
+
+create Table #drug_concept_ids (concept_id int, record_count bigint);
+insert into #drug_concept_ids (concept_id, record_count)
+select drug_concept_id, count_big(*) as record_count
+from @cdm_database_schema.drug_exposure co1
+group by drug_concept_id;
 
 
 
@@ -3376,11 +3449,14 @@ ACHILLES Analyses on DRUG_EXPOSURE table
 -- 700	Number of persons with at least one drug occurrence, by drug_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, count_value)
 select 700 as analysis_id, 
-	de1.drug_CONCEPT_ID as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	COUNT_BIG(distinct de1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.drug_exposure de1
-group by de1.drug_CONCEPT_ID
+inner join
+  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)  
+group by anc.ancestor_concept_id	
 ;
 --}
 
@@ -3389,11 +3465,14 @@ group by de1.drug_CONCEPT_ID
 -- 701	Number of drug occurrence records, by drug_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, count_value)
 select 701 as analysis_id, 
-	de1.drug_CONCEPT_ID as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	COUNT_BIG(de1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.drug_exposure de1
-group by de1.drug_CONCEPT_ID
+inner join
+  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)    
+group by 	anc.ancestor_concept_id
 ;
 --}
 
@@ -3403,12 +3482,15 @@ group by de1.drug_CONCEPT_ID
 -- 702	Number of persons by drug occurrence start month, by drug_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, count_value)
 select 702 as analysis_id,   
-	de1.drug_concept_id as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	YEAR(drug_exposure_start_date)*100 + month(drug_exposure_start_date) as stratum_2, 
 	COUNT_BIG(distinct PERSON_ID) as count_value
 from
-@cdm_database_schema.drug_exposure de1
-group by de1.drug_concept_id, 
+  @cdm_database_schema.drug_exposure de1
+inner join
+  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)    
+group by 	anc.ancestor_concept_id, 
 	YEAR(drug_exposure_start_date)*100 + month(drug_exposure_start_date)
 ;
 --}
@@ -3422,9 +3504,12 @@ with rawData(count_value) as
   select num_drugs as count_value
 	from
 	(
-		select de1.person_id, COUNT_BIG(distinct de1.drug_concept_id) as num_drugs
+		select de1.person_id, COUNT_BIG(distinct anc.ancestor_concept_id) as num_drugs
 		from
-		@cdm_database_schema.drug_exposure de1
+  		@cdm_database_schema.drug_exposure de1
+    inner join
+      @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+    where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)        
 		group by de1.person_id
 	) t0
 ),
@@ -3485,16 +3570,18 @@ drop table #tempResults;
 -- 704	Number of persons with at least one drug occurrence, by drug_concept_id by calendar year by gender by age decile
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, stratum_3, stratum_4, count_value)
 select 704 as analysis_id,   
-	de1.drug_concept_id as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	YEAR(drug_exposure_start_date) as stratum_2,
 	p1.gender_concept_id as stratum_3,
 	floor((year(drug_exposure_start_date) - p1.year_of_birth)/10) as stratum_4, 
 	COUNT_BIG(distinct p1.PERSON_ID) as count_value
 from @cdm_database_schema.PERSON p1
 inner join
-@cdm_database_schema.drug_exposure de1
-on p1.person_id = de1.person_id
-group by de1.drug_concept_id, 
+  @cdm_database_schema.drug_exposure de1  on p1.person_id = de1.person_id
+inner join
+  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)    
+group by anc.ancestor_concept_id, 
 	YEAR(drug_exposure_start_date),
 	p1.gender_concept_id,
 	floor((year(drug_exposure_start_date) - p1.year_of_birth)/10)
@@ -3505,12 +3592,15 @@ group by de1.drug_concept_id,
 -- 705	Number of drug occurrence records, by drug_concept_id by drug_type_concept_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, stratum_1, stratum_2, count_value)
 select 705 as analysis_id, 
-	de1.drug_CONCEPT_ID as stratum_1,
+	anc.ancestor_concept_id as stratum_1,
 	de1.drug_type_concept_id as stratum_2,
 	COUNT_BIG(de1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.drug_exposure de1
-group by de1.drug_CONCEPT_ID,	
+inner join
+  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)    
+group by anc.ancestor_concept_id,	
 	de1.drug_type_concept_id
 ;
 --}
@@ -3519,23 +3609,26 @@ group by de1.drug_CONCEPT_ID,
 
 --{706 IN (@list_of_analysis_ids)}?{
 -- 706	Distribution of age by drug_concept_id
-select de1.drug_concept_id as subject_id,
+select de1.ancestor_concept_id as subject_id,
   p1.gender_concept_id,
 	de1.drug_start_year - p1.year_of_birth as count_value
 INTO #rawData_706
 from @cdm_database_schema.PERSON p1
 inner join
 (
-	select person_id, drug_concept_id, min(year(drug_exposure_start_date)) as drug_start_year
-	from @cdm_database_schema.drug_exposure
-	group by person_id, drug_concept_id
+	select person_id, anc.ancestor_concept_id, min(year(drug_exposure_start_date)) as drug_start_year
+	from @cdm_database_schema.drug_exposure de1
+  inner join
+    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)      
+	group by person_id, anc.ancestor_concept_id
 ) de1 on p1.person_id = de1.person_id
 ;
 
 with overallStats (stratum1_id, stratum2_id, avg_value, stdev_value, min_value, max_value, total) as
 (
   select subject_id as stratum1_id,
-    gender_concept_id as stratum2_id,
+    gender_concept_id as stratum2_id,  
     avg(1.0 * count_value) as avg_value,
     stdev(count_value) as stdev_value,
     min(count_value) as min_value,
@@ -3604,8 +3697,6 @@ from
 where p1.person_id is null
 ;
 --}
-
-
 --{710 IN (@list_of_analysis_ids)}?{
 -- 710	Number of drug exposure records outside valid observation period
 insert into @results_database_schema.ACHILLES_results (analysis_id, count_value)
@@ -3620,8 +3711,6 @@ from
 where op1.person_id is null
 ;
 --}
-
-
 --{711 IN (@list_of_analysis_ids)}?{
 -- 711	Number of drug exposure records with end date < start date
 insert into @results_database_schema.ACHILLES_results (analysis_id, count_value)
@@ -3632,8 +3721,6 @@ from
 where de1.drug_exposure_end_date < de1.drug_exposure_start_date
 ;
 --}
-
-
 --{712 IN (@list_of_analysis_ids)}?{
 -- 712	Number of drug exposure records with invalid provider_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, count_value)
@@ -3647,7 +3734,6 @@ where de1.provider_id is not null
 	and p1.provider_id is null
 ;
 --}
-
 --{713 IN (@list_of_analysis_ids)}?{
 -- 713	Number of drug exposure records with invalid visit_id
 insert into @results_database_schema.ACHILLES_results (analysis_id, count_value)
@@ -3661,17 +3747,17 @@ where de1.visit_occurrence_id is not null
 	and vo1.visit_occurrence_id is null
 ;
 --}
-
-
-
 --{715 IN (@list_of_analysis_ids)}?{
 -- 715	Distribution of days_supply by drug_concept_id
 with rawData(stratum_id, count_value) as
 (
-  select drug_concept_id,
+  select anc.ancestor_concept_id,
 		days_supply as count_value
-	from @cdm_database_schema.drug_exposure 
-	where days_supply is not null
+	from @cdm_database_schema.drug_exposure de1
+  inner join
+    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)  
+	and days_supply is not null
 ),
 overallStats (stratum_id, avg_value, stdev_value, min_value, max_value, total) as
 (
@@ -3730,10 +3816,13 @@ drop table #tempResults;
 -- 716	Distribution of refills by drug_concept_id
 with rawData(stratum_id, count_value) as
 (
-  select drug_concept_id,
-    refills as count_value
-	from @cdm_database_schema.drug_exposure 
-	where refills is not null
+  select anc.ancestor_concept_id,
+    refills as count_value 
+	from @cdm_database_schema.drug_exposure  de1
+  inner join
+    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)  
+	and refills is not null
 ),
 overallStats (stratum_id, avg_value, stdev_value, min_value, max_value, total) as
 (
@@ -3793,10 +3882,13 @@ drop table #tempResults;
 -- 717	Distribution of quantity by drug_concept_id
 with rawData(stratum_id, count_value) as
 (
-  select drug_concept_id,
+  select anc.ancestor_concept_id,
     quantity as count_value
-  from @cdm_database_schema.drug_exposure 
-	where quantity is not null
+  from @cdm_database_schema.drug_exposure de1
+  inner join
+    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)      
+	and quantity is not null
 ),
 overallStats (stratum_id, avg_value, stdev_value, min_value, max_value, total) as
 (
@@ -3848,8 +3940,8 @@ from #tempResults
 truncate table #tempResults;
 drop table #tempResults;
 
-
 --}
+
 
 
 --{720 IN (@list_of_analysis_ids)}?{
@@ -3863,6 +3955,10 @@ from
 group by YEAR(drug_exposure_start_date)*100 + month(drug_exposure_start_date)
 ;
 --}
+
+drop table #drug_concept_ids;
+--}
+
 
 /********************************************
 
@@ -6973,7 +7069,7 @@ where m.visit_occurrence_id is not null
 --{1814 IN (@list_of_analysis_ids)}?{
 -- 1814	Number of measurement records with no value (numeric or concept)
 insert into @results_database_schema.ACHILLES_results (analysis_id, count_value)
-select 814 as analysis_id,  
+select 1814 as analysis_id,  
 	COUNT_BIG(m.PERSON_ID) as count_value
 from
 	@cdm_database_schema.measurement m
@@ -7234,7 +7330,20 @@ group by YEAR(measurement_date)*100 + month(measurement_date)
 ;
 --}
 
+--{1821 IN (@list_of_analysis_ids)}?{
+-- 1821	Number of measurement records with no numeric value
+insert into @results_database_schema.ACHILLES_results (analysis_id, count_value)
+select 1821 as analysis_id,  
+	COUNT_BIG(m.PERSON_ID) as count_value
+from
+	@cdm_database_schema.measurement m
+where m.value_as_number is null
+;
+--}
 
+--end of measurment analyses
+
+--final processing of results
 delete from @results_database_schema.ACHILLES_results where count_value <= @smallcellcount;
 delete from @results_database_schema.ACHILLES_results_dist where count_value <= @smallcellcount;
 
