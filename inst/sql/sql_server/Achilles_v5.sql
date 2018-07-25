@@ -2479,7 +2479,7 @@ select 400 as analysis_id,
 from
 	@cdm_database_schema.condition_occurrence co1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)
 group by anc.ancestor_concept_id
 ;
@@ -2494,7 +2494,7 @@ select 401 as analysis_id,
 from
 	@cdm_database_schema.condition_occurrence co1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)
 group by anc.ancestor_concept_id
 ;
@@ -2511,7 +2511,7 @@ select 402 as analysis_id,
 from
 	@cdm_database_schema.condition_occurrence co1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)
 group by anc.ancestor_concept_id,
 	YEAR(condition_start_date)*100 + month(condition_start_date)
@@ -2527,7 +2527,7 @@ with rawData(person_id, count_value) as
   select person_id, COUNT_BIG(distinct anc.ancestor_concept_id) as num_conditions
   from @cdm_database_schema.condition_occurrence co1
 	inner join
-  	@vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+  	@cdm_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)
 	group by person_id
 ),
@@ -2598,7 +2598,7 @@ inner join
 @cdm_database_schema.condition_occurrence co1
 on p1.person_id = co1.person_id
 inner join
-  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)
 group by anc.ancestor_concept_id,
 	YEAR(condition_start_date),
@@ -2617,7 +2617,7 @@ select 405 as analysis_id,
 from
 	@cdm_database_schema.condition_occurrence co1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on co1.condition_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)
 group by anc.ancestor_concept_id,
 	co1.condition_type_concept_id
@@ -2638,7 +2638,7 @@ inner join
 	select person_id, anc.ancestor_concept_id, min(year(condition_start_date)) as condition_start_year
 	from @cdm_database_schema.condition_occurrence co2
 	inner join
-    @vocab_database_schema.concept_ancestor anc   on co2.condition_concept_id = anc.descendant_concept_id
+    @cdm_database_schema.concept_ancestor anc   on co2.condition_concept_id = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #condition_concept_ids)
 	group by person_id, anc.ancestor_concept_id
 ) co1 on p1.person_id = co1.person_id
@@ -3293,7 +3293,7 @@ select 600 as analysis_id,
 from
 	@cdm_database_schema.procedure_occurrence po1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)
 group by anc.ancestor_concept_id
 ;
@@ -3309,7 +3309,7 @@ select 601 as analysis_id,
 from
 	@cdm_database_schema.procedure_occurrence po1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)
 group by anc.ancestor_concept_id
 ;
@@ -3327,7 +3327,7 @@ select 602 as analysis_id,
 from
   @cdm_database_schema.procedure_occurrence po1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)
 group by anc.ancestor_concept_id,
 	YEAR(procedure_date)*100 + month(procedure_date)
@@ -3343,7 +3343,7 @@ with rawData(count_value) as
   select COUNT_BIG(distinct anc.ancestor_concept_id) as num_procedures
 	from @cdm_database_schema.procedure_occurrence po
 	inner join
-  	@vocab_database_schema.concept_ancestor anc   on po.procedure_concept_id = anc.descendant_concept_id
+  	@cdm_database_schema.concept_ancestor anc   on po.procedure_concept_id = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)
 	group by po.person_id
 ),
@@ -3414,7 +3414,7 @@ from @cdm_database_schema.PERSON p1
 inner join
   @cdm_database_schema.procedure_occurrence po1
 inner join
-  	@vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+  	@cdm_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
 on p1.person_id = po1.person_id
 where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)
 group by anc.ancestor_concept_id,
@@ -3434,7 +3434,7 @@ select 605 as analysis_id,
 from
 	@cdm_database_schema.procedure_occurrence po1
 inner join
-  	@vocab_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
+  	@cdm_database_schema.concept_ancestor anc   on po1.procedure_concept_id = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)
 group by anc.ancestor_concept_id,
 	po1.procedure_type_concept_id
@@ -3455,7 +3455,7 @@ inner join
 	select person_id, anc.ancestor_concept_id, min(year(procedure_date)) as procedure_start_year
 	from @cdm_database_schema.procedure_occurrence po2
   inner join
-  	@vocab_database_schema.concept_ancestor anc   on po2.procedure_concept_id = anc.descendant_concept_id
+  	@cdm_database_schema.concept_ancestor anc   on po2.procedure_concept_id = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #procedure_concept_ids)
 	group by person_id, anc.ancestor_concept_id
 ) po1 on p1.person_id = po1.person_id
@@ -3639,8 +3639,8 @@ select 700 as analysis_id,
 	COUNT_BIG(distinct de1.PERSON_ID) as count_value
 from
 	@cdm_database_schema.drug_exposure de1
-inner join
-  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+left join
+  @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 group by anc.ancestor_concept_id
 ;
@@ -3656,7 +3656,7 @@ select 701 as analysis_id,
 from
 	@cdm_database_schema.drug_exposure de1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 group by 	anc.ancestor_concept_id
 ;
@@ -3674,7 +3674,7 @@ select 702 as analysis_id,
 from
   @cdm_database_schema.drug_exposure de1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 group by 	anc.ancestor_concept_id,
 	YEAR(drug_exposure_start_date)*100 + month(drug_exposure_start_date)
@@ -3694,7 +3694,7 @@ with rawData(count_value) as
 		from
   		@cdm_database_schema.drug_exposure de1
     inner join
-      @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+      @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
     where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 		group by de1.person_id
 	) t0
@@ -3760,12 +3760,12 @@ select 704 as analysis_id,
 	CAST(YEAR(drug_exposure_start_date) AS VARCHAR(255)) as stratum_2,
 	CAST(p1.gender_concept_id AS VARCHAR(255)) as stratum_3,
 	CAST(floor((year(drug_exposure_start_date) - p1.year_of_birth)/10) AS VARCHAR(255)) as stratum_4,
-	COUNT_BIG(distinct p1.PERSON_ID) AS VARCHAR(255)) as count_value
+	COUNT_BIG(distinct p1.PERSON_ID) as count_value
 from @cdm_database_schema.PERSON p1
 inner join
   @cdm_database_schema.drug_exposure de1  on p1.person_id = de1.person_id
 inner join
-  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 group by anc.ancestor_concept_id,
 	YEAR(drug_exposure_start_date),
@@ -3784,7 +3784,7 @@ select 705 as analysis_id,
 from
 	@cdm_database_schema.drug_exposure de1
 inner join
-  @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+  @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
 where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 group by anc.ancestor_concept_id,
 	de1.drug_type_concept_id
@@ -3805,7 +3805,7 @@ inner join
 	select person_id, anc.ancestor_concept_id, min(year(drug_exposure_start_date)) as drug_start_year
 	from @cdm_database_schema.drug_exposure de1
   inner join
-    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+    @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 	group by person_id, anc.ancestor_concept_id
 ) de1 on p1.person_id = de1.person_id
@@ -3941,7 +3941,7 @@ with rawData(stratum_id, count_value) as
 		days_supply as count_value
 	from @cdm_database_schema.drug_exposure de1
   inner join
-    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+    @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 	and days_supply is not null
 ),
@@ -4006,7 +4006,7 @@ with rawData(stratum_id, count_value) as
     refills as count_value
 	from @cdm_database_schema.drug_exposure  de1
   inner join
-    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+    @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 	and refills is not null
 ),
@@ -4072,7 +4072,7 @@ with rawData(stratum_id, count_value) as
     CAST(quantity AS FLOAT) as count_value
   from @cdm_database_schema.drug_exposure de1
   inner join
-    @vocab_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
+    @cdm_database_schema.concept_ancestor anc   on de1.drug_CONCEPT_ID  = anc.descendant_concept_id
   where  anc.ancestor_concept_id in (select concept_id from #drug_concept_ids)
 	and quantity is not null
 ),
