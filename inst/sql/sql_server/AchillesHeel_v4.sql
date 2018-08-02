@@ -45,8 +45,6 @@ SQL for ACHILLES results (for either OMOP CDM v4)
 
  
 --Achilles_Heel part:
-USE @results_database;
-
 IF OBJECT_ID('@results_database_schema.ACHILLES_HEEL_results', 'U') IS NOT NULL
   DROP TABLE @results_database_schema.ACHILLES_HEEL_results;
 
@@ -203,7 +201,7 @@ WHERE or1.analysis_id IN (
 GROUP BY or1.analysis_id,
 	oa1.analysis_name;
 
---ruleid 13 drug exposure - 8 RxNorm
+--ruleid 13 drug exposure - 8 RxNorm/82 RxNorm Extension
 INSERT INTO @results_database_schema.ACHILLES_HEEL_results (
 	analysis_id,
 	ACHILLES_HEEL_warning,
@@ -225,7 +223,7 @@ WHERE or1.analysis_id IN (
 		)
 	AND or1.stratum_1 IS NOT NULL
 	AND c1.concept_id <> 0 
-  AND c1.vocabulary_id NOT IN (0,8)
+  AND c1.vocabulary_id NOT IN (0,8,82)
 GROUP BY or1.analysis_id,
 	oa1.analysis_name;
 
