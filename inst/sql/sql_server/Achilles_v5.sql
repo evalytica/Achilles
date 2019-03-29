@@ -477,11 +477,11 @@ create table @results_database_schema.ACHILLES_analysis
 (
 	analysis_id int,
 	analysis_name varchar(255),
-	stratum_1_name varchar(255),
-	stratum_2_name varchar(255),
-	stratum_3_name varchar(255),
-	stratum_4_name varchar(255),
-	stratum_5_name varchar(255)
+	stratum_1_name varchar(610),
+	stratum_2_name varchar(610),
+	stratum_3_name varchar(610),
+	stratum_4_name varchar(610),
+	stratum_5_name varchar(610)
 );
 
 
@@ -491,11 +491,11 @@ IF OBJECT_ID('@results_database_schema.ACHILLES_results', 'U') IS NOT NULL
 create table @results_database_schema.ACHILLES_results
 (
 	analysis_id int,
-	stratum_1 varchar(255),
-	stratum_2 varchar(255),
-	stratum_3 varchar(255),
-	stratum_4 varchar(255),
-	stratum_5 varchar(255),
+	stratum_1 varchar(610),
+	stratum_2 varchar(610),
+	stratum_3 varchar(610),
+	stratum_4 varchar(610),
+	stratum_5 varchar(610),
 	count_value bigint
 );
 
@@ -506,11 +506,11 @@ IF OBJECT_ID('@results_database_schema.ACHILLES_results_dist', 'U') IS NOT NULL
 create table @results_database_schema.ACHILLES_results_dist
 (
 	analysis_id int,
-	stratum_1 varchar(255),
-	stratum_2 varchar(255),
-	stratum_3 varchar(255),
-	stratum_4 varchar(255),
-	stratum_5 varchar(255),
+	stratum_1 varchar(610),
+	stratum_2 varchar(610),
+	stratum_3 varchar(610),
+	stratum_4 varchar(610),
+	stratum_5 varchar(610),
 	count_value bigint,
 	min_value float,
 	max_value float,
